@@ -8,12 +8,12 @@ RUN go mod download && go mod verify
 COPY . .
 RUN go build -v -o /usr/src/app/ ./...
 
-FROM debian:bullseye
+FROM debian:bullseye-slim
 
-COPY --from=builder /usr/src/app/legacy-mock /
+COPY --from=builder /usr/src/app/mock-app /
 
-RUN addgroup legacy-mock \
-    && adduser --system --no-create-home --ingroup legacy-mock --uid 1005 legacy-mock
+RUN addgroup mock-app \
+    && adduser --system --no-create-home --ingroup mock-app --uid 1005 mock-app
 
 USER 1005
-ENTRYPOINT ["/legacy-mock"]
+ENTRYPOINT ["/mock-app"]

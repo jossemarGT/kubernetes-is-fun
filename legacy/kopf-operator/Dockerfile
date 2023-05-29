@@ -7,4 +7,4 @@ RUN pip install -r requirements.txt
 
 COPY . /src/
 
-CMD kopf run /src/controller.py
+CMD kopf run --all-namespaces /src/controller.py

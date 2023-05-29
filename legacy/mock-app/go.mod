@@ -1,3 +1,3 @@
-module github.com/jossemargt/let-talk-operators/legacy-mock
+module github.com/jossemargt/lets-talk-about-operators/legacy/mock-app
 
 go 1.19

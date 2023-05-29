@@ -18,7 +18,7 @@ spec:
         # secret-handshake: "true"
     spec:
       containers:
-      - image: jossemargt/legacy-mock:0.1.0
+      - image: lets-talk-about-operators/mock-app:0.1.0
         name: legacy-mock
 ---
 kind: Service

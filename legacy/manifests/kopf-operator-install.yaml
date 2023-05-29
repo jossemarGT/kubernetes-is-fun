@@ -13,19 +13,19 @@ rules:
   - apiGroups: [kopf.dev]
     resources: [clusterkopfpeerings]
     verbs: [list, watch, patch, get]
-  # KOPF: Utilizado para observar todos los CRDs
+  # KOPF: Utilizado para observar los CRDs dentro del cluster
   - apiGroups: [apiextensions.k8s.io]
     resources: [customresourcedefinitions]
     verbs: [list, watch]
   - apiGroups: [""]
     resources: [namespaces]
     verbs: [list, watch]
-  # KOPF: Utilizado para los "Admission Webhooks"
+  # KOPF: Utilizado para los administrar "Admission Webhooks"
   - apiGroups:
       [admissionregistration.k8s.io/v1, admissionregistration.k8s.io/v1beta1]
     resources: [validatingwebhookconfigurations, mutatingwebhookconfigurations]
     verbs: [create, patch]
-  # Legacy Operator: Utilizado para poder observar y actualizar los Pods
+  # Legacy Operator: Utilizado para poder observar y actualizar a los Pods
   - apiGroups: [""]
     resources: [pods]
     verbs: [list, watch, patch]
@@ -62,4 +62,4 @@ spec:
       serviceAccountName: legacy-account
       containers:
         - name: operator
-          image: jossemargt/legacy-operator:0.1.0
+          image: lets-talk-about-operators/kopf-operator:0.1.0
