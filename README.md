@@ -1,4 +1,4 @@
-# Hablemos de autómatas, blogs y Operadores de Kubernetes
+# Hablemos de autómatas y Operadores de Kubernetes
 
 Bienvenido a la introducción práctica a Operadores de Kubernetes. Si tuviste la
 oportunidad de estar en la plática podrás identificar fácilmente los ejemplos

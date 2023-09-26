@@ -1,37 +1,30 @@
 # Legacy
 
-> Tu equipo ha logrado migrar la mayoría de las aplicaciones a Kubernetes. Sin
-> embargo, aún queda una sola aplicación que pocos saben de cómo apareció o en
-> que lenguaje está escrita. 
->
-> Todos la llaman ¡Legacy!
->
-> Legacy ya corre como contenedor pero aún necesita varios pasos manuales para
-> que arranque. 
-> 
-> ¡Ayudanos a escapar a la realidad que Legacy ha creado!
-
 Tal como conversamos en nuesra plática en vivo, necesitamos automatizar los
-pasos de inicialización de una aplicación "Legacy". En este punto ya descartamos
-las siguientes opciones:
+pasos de inicialización de una aplicación "Legacy" la cúal ya corre como
+contenedor.
+
+En este punto de la historia ya hemos descartado las siguientes opciones:
 
 - **Mantener el proceso manual**. Esto es lo que nuestros compañeros han hecho al
   día de hoy, pero no es escalable y necesitamos cambiarlo.
 - **Modificar a Legacy**. Lamentablemente el último que entendía el lenguaje en
   que está escrita Legacy ya no está con nosotros, así que esto es muy
-  complicado de lograrlo.
+  complicado lograrlo.
 - **Delegar proceso de despliegue a una solución de CI**. Esto puede funcionar,
   pero estaríamos agregando un segundo punto de falla en nuestro sistema; además
   los servidores de CI no son la mejor opción para mantener valores sensibles.
-- **Forzar Kubernetes**. Cualquier otra "solución creativa" que logre forzar a
-  Kubernetes a funcionar fuera de como fue diseñado. Puede funcionar, pero a la
-  larga vueve los sistemas más dificiles de mantener.
+- **Forzar Kubernetes**. Acá entran otras soluciones creativas que utilizan lo
+  que Kubernetes ya ofrece, como correr un "side car" container durmiente de un
+  solo propósito o un cron job que corre cada cierto tiempo. Esto puede
+  funcionar pero a largo plazo vueve los sistemas más dificiles de mantener.
 
-Así que tomaremos la ruta de crear nuestro propio Operador de Kubernetes para
-automatizar este proceso desde dentro del cluster y de manera autónoma.
+Con eso en mente preferimos tomar la ruta de crear nuestro propio Operador de
+Kubernetes para automatizar este proceso desde dentro del cluster y de manera
+autónoma.
 
 - [La historia continúa](#la-historia-continúa)
-  - [Hagamos el despliegue manual de Legacy](#hagamos-el-despliegue-manual-de-legacy)
+  - [Haciendo un despliegue manual de Legacy](#haciendo-un-despliegue-manual-de-legacy)
   - [Automatizemos con operadores](#automatizemos-con-operadores)
   - [Somos libres de Legacy y ¿ahora qué?](#somos-libres-de-legacy-y-ahora-qué)
   - [Otros detalles de interés](#otros-detalles-de-interés)
@@ -49,9 +42,9 @@ necesita de atención constante de nuestro equipo.
 El proceso de inicialización consiste en acceder a un
 [http endpoint]((https://www.cloudflare.com/es-es/learning/security/api/what-is-api-endpoint/))
 interno el cual expone la mitad de una cadena secreta. Esta cadena debe ser
-tomada por un agente externo y unirla con la otra mitad; una vez unidas debe ser
-enviada como solo una cadena a otro endpoint interno. Cuando este proceso se
-hace correctamente Legacy permitirá que se accedan a los endpoints públicos.
+tomada por un agente externo y unirla con la otra mitad; luego debe ser enviada
+como solo una cadena a otro endpoint interno. Cuando este proceso se hace
+correctamente Legacy permitirá el acceso a sus demás endpoints públicos.
 
 Los endpoints que Legacy expone son:
 
@@ -63,7 +56,7 @@ Los endpoints que Legacy expone son:
 - `/` representa a todos los endpoints públicos y retornará error mientras
   Legacy no esté inicializada.
 
-### Hagamos el despliegue manual de Legacy
+### Haciendo un despliegue manual de Legacy
 
 > ℹ️ **Recuerda**
 > Puedes hacer esto desde tu [laboratorio local](#configurando-laboratorio-local).
@@ -73,8 +66,8 @@ Legacy ya puede ser desplegada como
 con su respectivos
 [Service](https://kubernetes.io/es/docs/concepts/services-networking/service/) e
 [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/). Aún
-así requiere tenemos que inicializarla manualmente como lo describimos en la
-sección anterior, en código se vería de la siguiente manera:
+así requiere que se inicialize manualmente como lo describimos en la sección
+anterior y en código el proceso se vería de la siguiente manera:
 
 - Aplicamos nuestro manifesto (el archivo yaml de Legacy)
 
@@ -148,23 +141,34 @@ It works!
 > ℹ️ **Recuerda**
 > Puedes hacer esto desde tu [laboratorio local](#configurando-laboratorio-local).
 
-Crear un operador de Kubernetes **desde cero** requiere tener un conocimiento de
-detalles como la arquitectura de los
+Crear un operador de Kubernetes **desde cero** requiere tener un basto
+conocimiento acerca de
 [controllers](https://kubernetes.io/docs/concepts/architecture/controller/) y
 como funciona el
 [API de Kubernetes](https://kubernetes.io/es/docs/concepts/overview/kubernetes-api/),
-por ello usaremos la ayuda de un framework para simplificar el desarrollo del
-nuestro.
+por eso es mejor ayudarse de un framework para simplificar el desarrollo de
+cualquier idea que tengamos.
 
 En este ejemplo usaremos el
-[Kubernetes Operator Pythonic Framework](https://github.com/nolar/kopf) o
-*KOPF*, dado que Python es sencillo de comprender para la mayoría de personas.
-Aún así debes saber que existen muchos más frameworks y toolkits que se pueden
-utilizar en su lugar dependiendo a las necesidades que buscas suplir. El código
-fuente de nuestro operador lo puedes encontrar en el directorio `kopf-operator`.
+[Kubernetes Operator Pythonic Framework](https://github.com/nolar/kopf) ó
+*KOPF*, dado que Python es sencillo de leer, comprender y explicar. Aún así
+debes saber que existen muchos más frameworks y toolkits que se pueden utilizar
+en su lugar dependiendo a las necesidades que buscas suplir. El código fuente de
+nuestro operador lo puedes encontrar en el directorio `kopf-operator`.
 
-Es más sencillo explicar como funciona una vez lo veamos en acción y para ello
-debemos hacer lo siguiente:
+Más adelante exploraremos el código, pero antes veamos como funciona la solución
+al problema en caso de que algo salga mal. Para ello debemos seguir estos pasos:
+
+- Primero debemos construir todos los artefactos que necesitamos tal como se
+  describe en la sección de
+  [configurando tu laboratorio local](#configurando-laboratorio-local).
+
+- No aseguramos que nuestro legacy-mock esté corriendo
+
+```sh
+$ cd legacy
+$ kubectl apply -f manifests/legacy-mock.yaml
+```
 
 - "Instalamos" nuestro operador
 
@@ -173,7 +177,7 @@ $ cd legacy
 $ kubectl apply -f manifests/kopf-operator-install.yaml
 ```
 
-- Verificamos que esté corriendo
+- Verificamos que el operador esté corriendo
 
 ```sh
 $ kubectl get deployment --field-selector metadata.name=legacy-operator
@@ -202,11 +206,14 @@ X-App-Version: 0.1.0
 Uninitialized
 ```
 
-¡Un momento! El nuevo pod de Legacy no está inicializado ¿qué ha pasado?. No
-preocupes, el Operador si notó el nuevo pod sin embargo decidió ignorarlo porque
-no traía consigo el label `secret-handshake`. Hemos agregado esta condicional
-extra en el operador para que pueda diferenciar los pods de Legacy que deben ser
-inicializados de los que no. Para arreglar esto haremos lo siguiente:
+¡Un momento! El nuevo pod de Legacy no está inicializado ¿qué ha pasado?.
+
+No te preocupes, el Operador si notó el nuevo pod sin embargo decidió ignorarlo
+porque no traía consigo el label `secret-handshake`. Hemos agregado esta
+condicional extra en el operador para que pueda diferenciar los pods de Legacy
+que deben ser inicializados de los demás corriendo en el cluster.
+
+Para arreglar esto haremos lo siguiente:
 
 - Descomentamos de `manifests/legacy-mock.yaml` el label `secret-handshake`
 
@@ -237,23 +244,25 @@ X-App-Version: 0.1.0
 It works!
 ```
 
-¡Listo! De ahora en adelante ya no tendremos más porque estar al tanto de cuando
-un nuevo Pod de Legacy es creado.
+De ahora en adelante cada vez que un nuevo pod de Legacy arranque será
+inicializado por nuestro Operador.
+
+¡Legacy ha sido reducido al orden!
 
 ### Somos libres de Legacy y ¿ahora qué?
 
 El código de nuestro `legacy-operator` es bastante simple por fines didácticos.
 Aún así podemos considerar las siguientes mejoras:
 
-- Complementar la solución con un
+- Para mantener la aplición sencilla implementamos el label especial
+  `secret-handshake` a nivel de Pod, pero sería mucho mejor si lo hacemos a
+  nivel de carga de trabajo (Deployment). De esta manera podemos determinar el
+  puerto que Legacy está usando inspeccionar el Service asociado a este.
+- A veces cuando se tiene una "aplicación especial" tal como lo es nuestra
+  Legacy, es mejor crearle su propio
   [Custom Resource Definition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
-  propio. De esta manera se aisla declarativamente que aplicaciones son Legacy
-  de las demás y también nos permite exponer explicitamente otras
-  configuraciones como el puerto que usará esta misma.
-- De no interesarnos mantener un Custom Resource Definition, tambien podemos
-  explorar el monitorear el label `secret-handshake` a nivel del Deployment en
-  lugar de Pod. De esta manera podemos determinar el puerto de Legacy al
-  inspeccionar el Service asociado a este.
+  De esta manera estaremos limitando los parametros que se pueden modificar y
+  crear roles más específicos para manipularlos.
 
 Lo bueno de frameworks como [Operator SDK](https://sdk.operatorframework.io/) o
 [KOPF](https://kopf.readthedocs.io/en/stable/) es que nos facilitan experimentar
@@ -304,7 +313,8 @@ minikube tunnel
 
 ## Acerca del código de nuestra historia
 
-La mejor parte de esta historia es poder revisar el código fuente y experimentar con el mismo. Nuestro ejemplo está divido en tres directorios principales:
+La mejor parte de esta historia es poder revisar el código fuente y experimentar
+con el mismo. Nuestro ejemplo está divido en tres directorios principales:
 
 - `mock-app` Contiene una pequeña aplicación escrita en Go simula el
   comportamiento de Legacy. Cabe resaltar que su código es derivado de
