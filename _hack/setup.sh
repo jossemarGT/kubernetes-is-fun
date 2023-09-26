@@ -13,9 +13,10 @@ fi
 minikube start \
     $MK_EXTRA_FLAGS \
     --addons ingress \
-    --profile operators 
+    --kubernetes-version v1.27.6 \
+    --profile "${DEFAULT_CLUSTER_NAME}"
 
-minikube profile operators
+minikube profile "${DEFAULT_CLUSTER_NAME}"
 
 if uname -s | grep -iq 'darwin'; then
     warn "

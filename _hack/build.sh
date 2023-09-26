@@ -28,6 +28,8 @@ if [ ! -d "${1}" ] || [ ! -f "${1}/Dockerfile" ]; then
     err_target "Opción seleccionada \"${1}\" inválida."
 fi
 
-eval $(minikube docker-env)
+eval "$(minikube docker-env)"
 
-build_image "${1}"
+for target in "${@}"; do
+    build_image "${target}"
+done

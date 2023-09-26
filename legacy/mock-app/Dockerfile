@@ -6,9 +6,10 @@ COPY go.mod ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN go build -v -o /usr/src/app/ ./...
+RUN CGO_ENABLED=0 \
+    go build -v -o /usr/src/app/ --ldflags '-extldflags "-static"' ./...
 
-FROM debian:bullseye-slim
+FROM alpine:3.18
 
 COPY --from=builder /usr/src/app/mock-app /
 
