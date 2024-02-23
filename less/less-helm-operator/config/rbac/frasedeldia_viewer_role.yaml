@@ -1,0 +1,27 @@
+# permissions for end users to view frasedeldia.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: frasedeldia-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: less-helm-operator
+    app.kubernetes.io/part-of: less-helm-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: frasedeldia-viewer-role
+rules:
+- apiGroups:
+  - apps.lets-talk-about-operators.local
+  resources:
+  - frasedeldia
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.lets-talk-about-operators.local
+  resources:
+  - frasedeldia/status
+  verbs:
+  - get

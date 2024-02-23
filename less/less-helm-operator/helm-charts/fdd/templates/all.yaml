@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "fdd.labels" . | nindent 4 }}
+  name: {{ include "fdd.fullname" . }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fdd.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fdd.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - image: hashicorp/http-echo:1.0
+        name: http-echo
+        args: 
+        - -text={{ .Values.frase }}
+        - -listen=:5678
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "fdd.labels" . | nindent 4 }}
+  name: {{ include "fdd.fullname" . }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: default
+    port: 5678
+    protocol: TCP
+    targetPort: 5678
+  selector:
+    {{- include "fdd.selectorLabels" . | nindent 8 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "fdd.fullname" . }}
+  labels:
+    {{- include "fdd.labels" . | nindent 4 }}
+spec:
+  rules:
+  - host: 'localhost'
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ include "fdd.fullname" . }}
+            port:
+              number: 5678
+        path: {{ .Values.path }}
+        pathType: Exact
