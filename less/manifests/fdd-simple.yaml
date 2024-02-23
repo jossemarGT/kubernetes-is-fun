@@ -1,0 +1,8 @@
+# ALTO! Sino has generado el operador esto no va a funcionar
+apiVersion: apps.lets-talk-about-operators.local/v1alpha1
+kind: FraseDelDia
+metadata:
+  name: app
+spec:
+  frase: Provisionado con un operador
+  path: /simple

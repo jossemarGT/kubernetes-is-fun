@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fdd-app
+  name: fdd-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fdd-app
+  template:
+    metadata:
+      labels:
+        app: fdd-app
+    spec:
+      containers:
+      - image: hashicorp/http-echo:1.0
+        name: http-echo
+        args: 
+        - "-text=Esta es una aplicación de ejemplo"
+        - "-listen=:5678"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: fdd-app
+  name: fdd-app
+spec:
+  type: ClusterIP
+  ports:
+  - name: default
+    port: 5678
+    protocol: TCP
+    targetPort: 5678
+  selector:
+    app: fdd-app
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fdd-app
+spec:
+  rules:
+  - host: 'localhost'
+    http:
+      paths:
+      - backend:
+          service:
+            name: fdd-app
+            port:
+              number: 5678
+        path: /manual
+        pathType: Exact

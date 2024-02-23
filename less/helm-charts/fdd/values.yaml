@@ -1,0 +1,3 @@
+replicas: 1
+frase: Hoy es un nuevo día
+path: "/fdd-default"

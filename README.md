@@ -9,6 +9,11 @@ En la raíz de este repositorio encontrarás los siguientes directorios:
 - **legacy**. Contiene el código fuente de nuestra aplicación "Legacy", el
   operador que maneja su despliegue y los manifestos que nos permiten
   provisionarlos.
+- **less**. Contiene los componentes que utilizamos para la historia *less is
+  more*, el helm chart de nuestra aplicación ejemplo, el código fuente del
+  operador generado por
+  [Operator SDK](https://sdk.operatorframework.io/docs/installation/) y los yaml
+  para desplegar cada componente.
 - **\_hack**. Acá están todos los scripts que nos ayudaran a hacer fácilmente
   inicializar y construir los artefactos que encuentras en el repositorio.
 
