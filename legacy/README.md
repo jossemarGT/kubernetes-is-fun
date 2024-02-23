@@ -8,18 +8,20 @@ Nuestro equipo ya ha intentando suficientes soluciones creativas sin suerte así
 que ahora es tiempo de salvar el día con Kubernetes y nuestro propio
 [operador](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
-- [La historia continúa](#la-historia-continúa)
-  - [Haciendo un despliegue manual de Legacy](#haciendo-un-despliegue-manual-de-legacy)
-  - [Automatizemos con operadores](#automatizemos-con-operadores)
-  - [Somos libres de Legacy y ¿ahora qué?](#somos-libres-de-legacy-y-ahora-qué)
-  - [Otros detalles de interés](#otros-detalles-de-interés)
-- [Configurando laboratorio local](#configurando-laboratorio-local)
-- [Acerca del código de nuestra historia](#acerca-del-código-de-nuestra-historia)
+- [El problema](#el-problema)
+  - [Haciendo un despliegue manual](#haciendo-un-despliegue-manual)
+- [Automatizemos con operadores](#automatizemos-con-operadores)
+- [Somos libres de Legacy y ¿ahora qué?](#somos-libres-de-legacy-y-ahora-qué)
+- [Otros detalles de interés](#otros-detalles-de-interés)
+- [Trabajemos en el laboratorio local](#trabajemos-en-el-laboratorio-local)
+  - [Acerca del código de nuestra historia](#acerca-del-código-de-nuestra-historia)
+  - [Comandos desarrollo que debes recordar](#comandos-desarrollo-que-debes-recordar)
 
-## La historia continúa
+## El problema
 
 Legacy es una aplicación que expone una
-[Restful API](https://aws.amazon.com/es/what-is/restful-api/), la cuál no aceptará ninguna petición pública hasta que se inicialize manualmente.
+[Restful API](https://aws.amazon.com/es/what-is/restful-api/), la cuál no
+aceptará ninguna petición pública hasta que se inicialize manualmente.
 
 El proceso de inicialización consiste en acceder a un
 [http endpoint]((https://www.cloudflare.com/es-es/learning/security/api/what-is-api-endpoint/))
@@ -37,10 +39,10 @@ Los endpoints que Legacy expone son:
 - `/` representa a los demás endpoints y retornará error `500` mientras
   la aplicación no esté inicializada.
 
-### Haciendo un despliegue manual de Legacy
+### Haciendo un despliegue manual
 
 > ℹ️ **Recuerda**
-> Puedes hacer esto desde tu [laboratorio local](#configurando-laboratorio-local).
+> Puedes hacer esto desde tu [laboratorio local](#trabajemos-en-el-laboratorio-local).
 
 Legacy ya puede ser desplegada como
 [Deployment](https://kubernetes.io/es/docs/concepts/workloads/controllers/deployment/),
@@ -128,10 +130,10 @@ X-App-Version: 0.1.0
 It works!
 ```
 
-### Automatizemos con operadores
+## Automatizemos con operadores
 
 > ℹ️ **Recuerda**
-> Puedes hacer esto desde tu [laboratorio local](#configurando-laboratorio-local).
+> Puedes hacer esto desde tu [laboratorio local](#trabajemos-en-el-laboratorio-local).
 
 Crear un operador de Kubernetes **desde cero** requiere tener un basto
 conocimiento acerca de
@@ -151,7 +153,7 @@ al problema en caso de que algo salga mal. Para ello debemos seguir estos pasos:
 
 - Primero debemos construir todos los artefactos que necesitamos tal como se
   describe en la sección de
-  [configurando tu laboratorio local](#configurando-laboratorio-local).
+  [configurando tu laboratorio local](#trabajemos-en-el-laboratorio-local).
 
 - Nos aseguramos que nuestro legacy-mock esté corriendo
 
@@ -241,7 +243,7 @@ inicializado por nuestro Operador.
 
 ¡Legacy ha sido reducido al orden!
 
-### Somos libres de Legacy y ¿ahora qué?
+## Somos libres de Legacy y ¿ahora qué?
 
 El código de nuestro `legacy-operator` es bastante simple por fines didácticos.
 Aún así podemos considerar las siguientes mejoras:
@@ -259,7 +261,7 @@ Lo bueno de frameworks como [Operator SDK](https://sdk.operatorframework.io/) ó
 [KOPF](https://kopf.readthedocs.io/en/stable/) es que nos facilitan experimentar
 con todas las alternativas que podamos imaginar.
 
-### Otros detalles de interés
+## Otros detalles de interés
 
 Algo que no mencionamos durante la historia es que los operadores necesitan
 permisos para poder interactuar con el
@@ -269,7 +271,7 @@ Esta asignación de permisos los puedes observar al inicio de
 [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac)
 que podemos abordar en otra ocasión 😉.
 
-## Configurando laboratorio local
+## Trabajemos en el laboratorio local
 
 Para que puedas experimentar con el código de esta historia puedes levantar tu
 laboratorio local de la siguiente manera:
@@ -302,7 +304,7 @@ interactuar directamente con Legacy:
 minikube tunnel
 ```
 
-## Acerca del código de nuestra historia
+### Acerca del código de nuestra historia
 
 La mejor parte de esta historia es poder revisar el código fuente y experimentar
 con el mismo. Nuestro ejemplo está divido en tres directorios principales:
@@ -316,3 +318,34 @@ con el mismo. Nuestro ejemplo está divido en tres directorios principales:
 
 - `manifests` Contiene todos los Kubernetes Manifest (archivos YAML) que definen
   como provisionar a Legacy y nuestro Operador.
+
+### Comandos desarrollo que debes recordar
+
+Crear ambiente virtual para las librerías
+
+```sh
+python -m venv .venv
+```
+
+Activar ó desactivar ambiente virtual
+
+```sh
+# Activar
+source .venv/bin/activate
+# Desactivar
+deactivate
+```
+
+Instalar todas las dependencias
+
+```sh
+# Dentro del directorio de kopf-opeartor
+python -m pip install -r requirements.txt
+```
+
+Correr operador en modo desarrollo
+
+```sh
+# Dentro del directorio de kopf-opeartor
+kopf run --all-namespaces controller.py
+```

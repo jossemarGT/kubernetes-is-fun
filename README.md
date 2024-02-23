@@ -6,10 +6,9 @@ que se encuentran en este repositorio.
 
 En la raíz de este repositorio encontrarás los siguientes directorios:
 
-- **legacy**. Contiene los componentes de nuestra historia *legacy attack!*,
-  cómo el código fuente de "Legacy", el código fuente de de nuestro
-  operador[kopf](https://github.com/nolar/kopf) y los manifestos que nos
-  permiten provisionarlos.
+- **legacy**. Contiene el código fuente de nuestra aplicación "Legacy", el
+  operador que maneja su despliegue y los manifestos que nos permiten
+  provisionarlos.
 - **\_hack**. Acá están todos los scripts que nos ayudaran a hacer fácilmente
   inicializar y construir los artefactos que encuentras en el repositorio.
 
