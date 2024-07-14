@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bouncer-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ejemplo
+  namespace: bouncer-demo
+  # labels:
+  #   equipo: kcd-lima-2024
+data:
+  key: value
