@@ -1,8 +1,13 @@
-# ALTO! Sino has generado el operador esto no va a funcionar
-apiVersion: apps.lets-talk-about-operators.local/v1alpha1
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fdd-demo
+---
+apiVersion: apps.kubernetes-is-fun.local/v1alpha1
 kind: FraseDelDia
 metadata:
   name: app
+  namespace: fdd-demo
 spec:
-  frase: KCD Guadalajara
+  frase: KCD Lima 2024
   path: /simple

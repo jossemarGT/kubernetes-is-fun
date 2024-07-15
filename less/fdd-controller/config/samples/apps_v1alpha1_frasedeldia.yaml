@@ -1,0 +1,11 @@
+apiVersion: apps.kubernetes-is-fun.local/v1alpha1
+kind: FraseDelDia
+metadata:
+  name: frasedeldia-sample
+spec:
+  # Default values copied from <project_dir>/helm-charts/fdd/values.yaml
+  frase: Hoy es un nuevo día
+  path: /fdd-default
+  replicas: 1
+  
+  

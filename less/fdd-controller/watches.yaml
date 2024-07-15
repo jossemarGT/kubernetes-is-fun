@@ -1,0 +1,6 @@
+# Use the 'create api' subcommand to add watches to this file.
+- group: apps.kubernetes-is-fun.local
+  version: v1alpha1
+  kind: FraseDelDia
+  chart: helm-charts/fdd
+#+kubebuilder:scaffold:watch
