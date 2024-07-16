@@ -9,8 +9,7 @@ import urllib3
 @kopf.on.event('pods',
                labels={'secret-handshake': kopf.PRESENT},
                annotations={'secret-handshake-done': kopf.ABSENT})
-async def pod_in_sight(event, status, namespace, name, logger, **_):
-    # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
     if status.get('phase') != 'Running' or event.get('type') == 'DELETED':
         return
 
@@ -18,10 +17,7 @@ async def pod_in_sight(event, status, namespace, name, logger, **_):
     if not podIP:
         return
 
-    logger.info(
-        f"=== Found {name} in {namespace} namespace w/ {podIP} address")
-    logger.debug("===")
-    logger.debug(event)
+    logger.info(f"=== Found {name} in {namespace} namespace w/ {podIP} address")
 
     asyncio.create_task(secret_handshake(podIP, namespace, name, logger))
 

@@ -1,48 +1,27 @@
-# Legacy
+# Legacy Automation (Operator)
 
-Tu equipo pensaba que solo era de empaquetar una aplicación en un contenedor y
-que luego todo sería paz despues de eso. Pronto descubriríamos que "Legacy"
-tenía más sorpresas por dentro.
-
-Nuestro equipo ya ha intentando suficientes soluciones creativas sin suerte así
-que ahora es tiempo de salvar el día con Kubernetes y nuestro propio
-[operador](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
-
-- [El problema](#el-problema)
-  - [Haciendo un despliegue manual](#haciendo-un-despliegue-manual)
-- [Automatizemos con operadores](#automatizemos-con-operadores)
-- [Somos libres de Legacy y ¿ahora qué?](#somos-libres-de-legacy-y-ahora-qué)
-- [Otros detalles de interés](#otros-detalles-de-interés)
-- [Trabajemos en el laboratorio local](#trabajemos-en-el-laboratorio-local)
-  - [Acerca del código de nuestra historia](#acerca-del-código-de-nuestra-historia)
-  - [Comandos desarrollo que debes recordar](#comandos-desarrollo-que-debes-recordar)
+A veces encontramos que manejar ciertos procesos o aplicaciones requiere
+demasiada intervención manual. Veamos cómo podemos extender Kubernetes para
+automatizar la solución a estos problemas.
 
 ## El problema
 
-Legacy es una aplicación que expone una
-[Restful API](https://aws.amazon.com/es/what-is/restful-api/), la cuál no
-aceptará ninguna petición pública hasta que se inicialize manualmente.
+Tu equipo recién terminó la ardua tarea de migrar todas las aplicaciones a
+[contedores](https://glossary.cncf.io/es/container/), sin embargo hay una que
+necesita un trato especial para ser desplegada. Muchos la llaman "Legacy" porque
+nadie conoce al autor ni el lenguaje en que está escrita pero existe desde mucho
+tiempo atrás.
 
-El proceso de inicialización consiste en acceder a un
-[http endpoint]((https://www.cloudflare.com/es-es/learning/security/api/what-is-api-endpoint/))
-interno para obtener la mitad de una cadena secreta, nuestro equipo la completa
-con la otra mitada y luego la envían de vuelta a la aplicación. Hasta que este
-proceso se haga correctamente Legacy será completamente funciona.
+Legacy tiene la peculiaridad de requerir un "apretón de mano secreto" antes de
+iniciar a operar, el cual no es sencillo de automatizar con lo que Kubernetes
+ofrece por defecto. Este proceso se puede resumir en los siguientes pasos:
 
-Los endpoints que Legacy expone son:
+- Obtenemos una mitad de la cadena secret accediendo al endpoint `/internal/key`.
+- Unir esta cadena con la otra mitad que solo el equipo de operaciones conoce.
+- Enviarmos la nueva cadena secreta al endpoint `/internal/secret`.
+- Si hicimos el proceso bien, Legacy comenzará a funcionar.
 
-- `GET /health` siempre responde `200` toda vez Legacy esté corriendo.
-- `GET /internal/key` responde con la *mitad* de la cadena secreta, mientras la
-  aplicación no esté inicializada.
-- `POST /internal/secret` acepta la cadena secreta completa. En caso de ser la
-  cadena correcta responderá `204` y desbloqueará los demás endpoints.
-- `/` representa a los demás endpoints y retornará error `500` mientras
-  la aplicación no esté inicializada.
-
-### Haciendo un despliegue manual
-
-> ℹ️ **Recuerda**
-> Puedes hacer esto desde tu [laboratorio local](#trabajemos-en-el-laboratorio-local).
+### El despliegue manual
 
 Legacy ya puede ser desplegada como
 [Deployment](https://kubernetes.io/es/docs/concepts/workloads/controllers/deployment/),
@@ -52,22 +31,29 @@ con su respectivos
 así requiere que se inicialize manualmente como lo describimos anteriormente; en
 código el proceso se vería de la siguiente manera:
 
-- Aplicamos nuestro manifesto (el archivo yaml de Legacy)
+- Construimos la imagen de Legacy
 
-```sh
-$ cd legacy
-$ kubectl apply -f manifests/legacy-mock.yaml
+```shell
+../_hack/build.sh ./mock-app
 ```
-  
+
+- Aplicamos su manifest en Kubernetes
+
+```shell
+kubectl apply -f manifests/legacy-mock.yaml
+```
+
 - Verificamos si Legacy está corriendo
 
-```sh
+```shell
 $  kubectl get deployments
 NAME          READY   UP-TO-DATE   AVAILABLE   AGE
 legacy-mock   1/1     1            0           15s
 ```
 
-```sh
+- Verificamos sus endpoints (recuerda esto necesita `minikube tunnel`)
+
+```shell
 $ curl -i http://localhost/health
 HTTP/1.1 200 OK
 Content-Type: text/plain; charset=utf-8
@@ -90,21 +76,21 @@ Uninitialized
 
 - Tomamos la mitad de la cadena secreta
 
-```sh
+```shell
 $ curl http://localhost/internal/key
 VGhpcyBpcyBAICQzY3IzdCBrZXk=
 ```
 
 - Generamos la cadena completa de nuestro lado
 
-```sh
+```shell
 $ curl -s http://localhost/internal/key | base64 -d | xargs -I {} echo '{}-acknowledge' | base64
 VGhpcyBpcyBAICQzY3IzdCBrZXktYWNrbm93bGVkZ2UK
 ```
 
 - Enviamos la cadena completa de vuelta a Legacy
 
-```sh
+```shell
 $ curl -i -XPOST -d 'VGhpcyBpcyBAICQzY3IzdCBrZXktYWNrbm93bGVkZ2UK' http://localhost/internal/secret
 HTTP/1.1 202 Accepted
 Content-Type: text/plain; charset=utf-8
@@ -116,9 +102,9 @@ X-App-Version: 0.1.0
 Accepted
 ```
 
-- Revisamos si Legacy ya está sirviendo los endpoints públicos
+- Por ultimo revisamos si Legacy ya está sirviendo los endpoints públicos
 
-```sh
+```shell
 $ curl -i http://localhost/
 HTTP/1.1 200 OK
 Content-Type: text/plain; charset=utf-8
@@ -130,65 +116,290 @@ X-App-Version: 0.1.0
 It works!
 ```
 
-## Automatizemos con operadores
+Definitivamente no es algo que querramos hacer manualmente en cada despliegue.
 
-> ℹ️ **Recuerda**
-> Puedes hacer esto desde tu [laboratorio local](#trabajemos-en-el-laboratorio-local).
+## El concepto
 
-Crear un operador de Kubernetes **desde cero** requiere tener un basto
-conocimiento acerca de
-[controllers](https://kubernetes.io/docs/concepts/architecture/controller/) y
-como funciona el
-[API de Kubernetes](https://kubernetes.io/es/docs/concepts/overview/kubernetes-api/),
-por eso es mejor ayudarse de un framework para simplificar el desarrollo de
-cualquier idea que tengamos. En este ejemplo usaremos el
-[Kubernetes Operator Pythonic Framework](https://github.com/nolar/kopf) ó
-*KOPF*, dado que Python es sencillo de leer, comprender y explicar. Aún así
-debes saber que existen muchos más frameworks y toolkits que se pueden utilizar
-en su lugar dependiendo a las necesidades que buscas suplir. El código fuente de
-nuestro operador lo puedes encontrar en el directorio `kopf-operator`.
+Se le dice
+[operador](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) a la
+pieza de software que permite ampliar o automatizar el comportamiento de un
+clúster sin modificar el código de Kubernetes al vincular los controladores a
+uno o más recursos personalizados.
 
-Más adelante exploraremos el código, pero antes veamos como funciona la solución
-al problema en caso de que algo salga mal. Para ello debemos seguir estos pasos:
+Es decir un operador es el software/aplicación que permite automatizar las
+tareas que contraparte humana (human operator) realiza en un clúster de
+Kubernetes.
 
-- Primero debemos construir todos los artefactos que necesitamos tal como se
-  describe en la sección de
-  [configurando tu laboratorio local](#trabajemos-en-el-laboratorio-local).
+## La solución
 
-- Nos aseguramos que nuestro legacy-mock esté corriendo
+Utilizaremos el
+[Kubernetes Operator Pythonic Framework](https://github.com/nolar/kopf) ó _KOPF_
+para escribir la lógica del proceso que necesitamos automatizar en un
+lenguaje de programación sencillo de comprender.
 
-```sh
-$ cd legacy
-$ kubectl get Deployment legacy-mock
+0. En un directorio nuevo, creamos un ambiente virtual de python
+
+```shell
+mkdir operator && cd operator
+python -m venv .venv
+source .venv/bin/activate
+```
+
+1. Instalamos `kopf` como cli y librería junto a sus dependencias
+
+```shell
+pip install kopf
+cat << EOF >requirements.txt
+kopf
+kubernetes
+pyyaml
+requests
+EOF
+python -m pip install -r requirements.txt
+```
+
+3. Creamos un archivo llamado `legacy-automation.py` donde irá la lógica de
+   nuestro operador
+
+4. Registramos la función que debe ejecutarse por cada evento de `Pod` que se
+   encuentra en cluster.
+
+```python
+import kopf
+
+@kopf.on.event('pods')
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
+  logger.info(f"Found {name} in {namespace} namespace")
+```
+
+5. Probamos la lógica que llevamos de nuestro operador, ejecutandolo en "modo
+   dev" con el cli de `kopf` (Para detenerlo usa Ctrl + C)
+
+```shell
+$ kopf run --all-namespaces legacy-automation.py
+[... logs de inicialización ...]
+[INFO    ] Initial authentication has finished.
+[INFO    ] [kube-system/coredns-7db6d8ff4d-drgwx] Found coredns-7db6d8ff4d-drgwx in kube-system namespace
+[INFO    ] [kube-system/coredns-7db6d8ff4d-drgwx] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/etcd-k8s-fun] Found etcd-k8s-fun in kube-system namespace
+[INFO    ] [kube-system/etcd-k8s-fun] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/kube-apiserver-k8s-fun] Found kube-apiserver-k8s-fun in kube-system namespace
+[INFO    ] [kube-system/kube-apiserver-k8s-fun] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/kube-controller-manager-k8s-fun] Found kube-controller-manager-k8s-fun in kube-system namespace
+[INFO    ] [kube-system/kube-controller-manager-k8s-fun] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/kube-proxy-v2dsr] Found kube-proxy-v2dsr in kube-system namespace
+[INFO    ] [kube-system/kube-proxy-v2dsr] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/kube-scheduler-k8s-fun] Found kube-scheduler-k8s-fun in kube-system namespace
+[INFO    ] [kube-system/kube-scheduler-k8s-fun] Handler 'handle_legacy_pod' succeeded.
+[INFO    ] [kube-system/storage-provisioner] Found storage-provisioner in kube-system namespace
+[INFO    ] [kube-system/storage-provisioner] Handler 'handle_legacy_pod' succeeded.
+```
+
+6. Como a nuestro operador solo le intersan los `Pod` asociados a Legacy,
+   filtraremos los eventos que esten asociados al label `secret-handshake`
+
+```python
+import kopf
+
+@kopf.on.event('pods',
+               labels={'secret-handshake': kopf.PRESENT})
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
+  logger.info(f"Found {name} in {namespace} namespace")
+```
+
+7. Si ejecutamos nuestro operador en "modo dev" una vez más, veremos que ya no
+   aparecen más logs, porque aún no está desplegado ningún `Pod` con el label
+   `secret-handshake`
+
+```shell
+$ kopf run --all-namespaces legacy-automation.py
+[... logs de inicialización ...]
+```
+
+8. Como lo más importante para inicializar Legacy es determinar su IP.
+   Filtraremos una vez más los eventos enfocandonos en obtener esta información
+   de un `Pod` que ya esté en ejecución y utilice la label `secret-handshake`
+
+```python
+import kopf
+
+@kopf.on.event('pods',
+               labels={'secret-handshake': kopf.PRESENT},)
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
+    if status.get('phase') != 'Running' or event.get('type') == 'DELETED':
+        return
+
+    podIP = status.get('podIP', '')
+    if not podIP:
+        return
+
+    logger.info(f"=== Found {name} in {namespace} namespace w/ {podIP} address")
+
+    # TODO: Add the automation logic here
+```
+
+9. Verificaremos una última vez en "modo dev" antes de agregar la lógica del
+   "apreton de manos secreto". Para ello crearemos un `Pod` de pruebas primero y
+   luego correremos nuestro operador.
+
+```shell
+$ kubectl run dummy-app --image busybox --labels secret-handshake=true --command -- sleep 90s
+$ kopf run --all-namespaces legacy-automation.py
+[... logs de inicialización ...]
+[INFO    ] [default/dummy-app] === Found dummy-app in default namespace w/ 10.244.0.24 address
+[INFO    ] [default/dummy-app] Handler 'handle_legacy_pod' succeeded.
+```
+
+10. _Opcional_. Elimina el `Pod` que creamos anteriormente para no confundir
+    futuras pruebas
+
+```shell
+kubectl delete pod dummy-app
+```
+
+11. Ahora agregamos toda la lógica de inicialización del `Pod`. El resultado
+    final debe verse similar a lo que encuentras en `kopf-operator/operator.py`
+
+<details>
+
+```python
+import asyncio
+import kopf
+import kubernetes
+import requests
+import base64
+import urllib3
+
+
+@kopf.on.event('pods',
+               labels={'secret-handshake': kopf.PRESENT},
+               annotations={'secret-handshake-done': kopf.ABSENT})
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
+    if status.get('phase') != 'Running' or event.get('type') == 'DELETED':
+        return
+
+    podIP = status.get('podIP', '')
+    if not podIP:
+        return
+
+    logger.info(f"=== Found {name} in {namespace} namespace w/ {podIP} address")
+
+    asyncio.create_task(secret_handshake(podIP, namespace, name, logger))
+
+
+async def secret_handshake(podIP, namespace, name, logger):
+    try:
+        logger.info(f"=== Pod secret handshake starts")
+
+        r = requests.get(f"http://{podIP}:3000/internal/key", timeout=30)
+        if r.status_code != 200:
+            logger.error("handshake failed fetching the key")
+            return
+
+        key = base64.b64decode(r.text)
+        secret = base64.b64encode(key + "-acknowledge".encode())
+
+        r = requests.post(
+            f"http://{podIP}:3000/internal/secret", data=secret, timeout=30)
+
+        if r.status_code < 200 or r.status_code > 299:
+            logger.error(f"handshake failed fetching the key. Response: {r.text}")
+            return
+
+        kubernetes.config.load_incluster_config()
+        api = kubernetes.client.CoreV1Api()
+        api.patch_namespaced_pod(name=name,namespace=namespace, body=[{
+            'op': 'add',
+            'path': '/metadata/annotations',
+            'value': {
+                'secret-handshake-done': 'true'
+            }
+        }])
+
+        logger.info(f"=== Pod secret handshake finished")
+
+    except requests.exceptions.Timeout:
+        logger.info(f"=== Connection timeout http://{podIP}:3000/")
+    except urllib3.exceptions.NewConnectionError:
+        logger.info("Unable to stablish new connection. Will retry")
+    except asyncio.CancelledError:
+        logger.info(f"=== Pod secret handshake is cancelled!")
+    except Exception as e:
+        logger.error(e)
+
+```
+
+</details>
+
+12. Construiremos la imagen de la solución final. (Si prefieres utilzar tu
+    versión debes cambiar el argumento a `./operator`)
+
+```shell
+../_hack/build.sh ./kopf-operator
+```
+
+13. "Instalamos" el operador dentro del clúster
+
+```shell
+$ kubectl apply -f manifests/kopf-operator-install.yaml
+namespace/legacy-operator-system created
+serviceaccount/kopf-legacy-operator-sa created
+clusterrole.rbac.authorization.k8s.io/kopf-legacy-operator-cluster-role created
+clusterrolebinding.rbac.authorization.k8s.io/kopf-legacy-operator-cluster-role-binding created
+deployment.apps/legacy-operator created
+```
+
+14. Verificamos que el operador esté corriendo sin problemas
+
+```shell
+$ kubectl get deployment -n legacy-operator-system
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+legacy-operator   1/1     1            1           12s
+$ kubectl logs -n legacy-operator-system -l application=legacy-operator
+[INFO    ] Initial authentication has been initiated.
+[INFO    ] Activity 'login_via_client' succeeded.
+[INFO    ] Initial authentication has finished.
+```
+
+### Haciendo la prueba
+
+Una vez nuestro operador está corriendo, necesitamos desplegar a Legacy
+
+- Construimos la imagen de Legacy
+
+```shell
+../_hack/build.sh ./mock-app
+```
+
+- Aplicamos el manifest de Legacy en Kubernetes
+
+```shell
+$ kubectl apply -f manifests/legacy-mock.yaml
+namespace/legacy-automation-demo created
+deployment.apps/legacy-mock created
+service/legacy-mock-service created
+ingress.networking.k8s.io/legacy-mock-ingress created
+```
+
+- Nos aseguramos que la aplicación esté corriendo
+
+```shell
+$ kubectl get deployment -n legacy-automation-demo
 NAME              READY   UP-TO-DATE   AVAILABLE   AGE
 legacy-mock       1/1     1            1           1m33s
 ```
 
-- "Instalamos" nuestro operador
+- _Opcional_ Si hiciste el proceso manual anteriormente, seguramente tienes un
+  Pod de Legacy activo así que lo eliminaremos (no te preocupes, el Deployment
+  se encargará de crear uno nuevo)
 
-```sh
-$ cd legacy
-$ kubectl apply -f manifests/kopf-operator-install.yaml
-```
-
-- Verificamos que el operador esté corriendo
-
-```sh
-$ kubectl get deployment --field-selector metadata.name=legacy-operator
-NAME              READY   UP-TO-DATE   AVAILABLE   AGE
-legacy-operator   1/1     1            1           2m49s
-```
-
-- Para el momento de la verdad, eliminaremos cualquier pod de Legacy que este
-  corriendo para dejar que nuestro operador lo elimine
-
-```sh
+```shell
 kubectl delete pod --selector app=legacy-mock
 ```
 
 - Ahora revisamos si el **nuevo** Pod de Legacy ya está inicializado
 
-```sh
+```shell
 $ curl -i http://localhost/
 HTTP/1.1 503 Service Unavailable
 Content-Type: text/plain; charset=utf-8
@@ -200,25 +411,18 @@ X-App-Version: 0.1.0
 Uninitialized
 ```
 
-¡Un momento! El nuevo Pod de Legacy no está inicializado ¿qué ha pasado?.
+¡Un momento el nuevo Pod de Legacy no está inicializado! ¿Qué ha sucedido? 🤔.
 
-No te preocupes, el Operador si notó el nuevo pod sin embargo decidió ignorarlo
-porque no traía consigo el label `secret-handshake`. Hemos agregado esta
-condicional extra en el operador para que pueda diferenciar los pods de Legacy
-que deben ser inicializados de los demás corriendo en el cluster.
+Si te recuerdas nuestro operador utiliza el label `secret-handshake` para
+determinar cual `Pod` inicializar. Para arreglar esto haremos lo siguiente:
 
-Para arreglar esto haremos lo siguiente:
+- Descomentamos de `manifests/legacy-mock.yaml` el label `secret-handshake` y
+  aplicamos este nuevo cambio al cluster
 
-- Descomentamos de `manifests/legacy-mock.yaml` el label `secret-handshake`
-
-```sh
-sed -i 's/# secret-handshake.*/secret-handshake: "true"/' manifests/legacy-mock.yaml
-```
-
-- Aplicamos este nuevo cambio al cluster
-
-```sh
+```shell
+# sed 's/# //g' manifests/legacy-mock.yaml
 $ kubectl apply -f manifests/legacy-mock.yaml
+namespace/legacy-automation-demo unchanged
 deployment.apps/legacy-mock configured
 service/legacy-mock-service unchanged
 ingress.networking.k8s.io/legacy-mock-ingress unchanged
@@ -226,7 +430,7 @@ ingress.networking.k8s.io/legacy-mock-ingress unchanged
 
 - Verificamos si esta vez el nuevo Pod de Legacy está inicializado
 
-```sh
+```shell
 $ curl -i http://localhost/
 HTTP/1.1 200 OK
 Content-Type: text/plain; charset=utf-8
@@ -238,114 +442,92 @@ X-App-Version: 0.1.0
 It works!
 ```
 
-De ahora en adelante cada vez que un nuevo pod de Legacy arranque será
-inicializado por nuestro Operador.
+¡Funciona! Ahora ya no tenemos que estar persiguiendo los Pod de Legacy cada vez
+que arranquen.
 
-¡Legacy ha sido reducido al orden!
+## Otros detalles
 
-## Somos libres de Legacy y ¿ahora qué?
+Hay algunos detalles que tuvimos que saltarnos para mantener la narrativa del
+ejercicio corta, pero son igual de importantes así que los compartiremos acá.
 
-El código de nuestro `legacy-operator` es bastante simple por fines didácticos.
-Aún así podemos considerar las siguientes mejoras:
+### ¿Por qué la solución final tiene un filtro más sobre los annotations?
 
-- Para mantener la aplición sencilla podríamos mover el label `secret-handshake`
-  que actualmente se define a nivel de Pod, hacia la definición de la carga de
-  trabajo (Deployment). De esta podríamos identificar más fácilmente las
-  configuraciones asociadas al Deployment, Service e Ingress que comparten los
-  mismos selectors.
-- De manera alternativa podríamos considerar crear un
-  [Custom Resource Definition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
-  solamente para Legacy, por sus compartamientos únicos.
+A pesar de los demás filtros que colocamos previamente, el evento que buscamos
+puede suceder más de una vez y por ende el ciclo de inicialización puede ser
+lanzado varias veces aunque no sea necesario. Por ello utilizamos una
+[_annotation_](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/) (anotación), para determinar que Pods fueron previamente
+inicializados para ignorarlos más adelante.
 
-Lo bueno de frameworks como [Operator SDK](https://sdk.operatorframework.io/) ó
-[KOPF](https://kopf.readthedocs.io/en/stable/) es que nos facilitan experimentar
-con todas las alternativas que podamos imaginar.
+Puedes encontrar como agregamos este _annotation_ al Pod dentro de la función
+`secret_handshake` que sucede al final del ciclo de inicialización.
 
-## Otros detalles de interés
-
-Algo que no mencionamos durante la historia es que los operadores necesitan
-permisos para poder interactuar con el
-[API de Kubernetes](https://kubernetes.io/es/docs/concepts/overview/kubernetes-api/).
-Esta asignación de permisos los puedes observar al inicio de
-`manifests/kopf-operator-install.yaml` y a todo eso se le denomina
-[Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac)
-que podemos abordar en otra ocasión 😉.
-
-## Trabajemos en el laboratorio local
-
-Para que puedas experimentar con el código de esta historia puedes levantar tu
-laboratorio local de la siguiente manera:
-
-- En una terminal cambia al directorio `legacy`
-
-```sh
-cd legacy
+```python
+        kubernetes.config.load_incluster_config()
+        api = kubernetes.client.CoreV1Api()
+        api.patch_namespaced_pod(name=name,namespace=namespace, body=[{
+            'op': 'add',
+            'path': '/metadata/annotations',
+            'value': {
+                'secret-handshake-done': 'true'
+            }
+        }])
 ```
 
-- Inicializa el laboratorio usando minikube.
+### ¿El operador tiene acceso todos los recursos del clúster?
 
-```sh
-../_hack/setup.sh
+No, el operador tiene un acceso restringido al Kubernetes API. 
+
+Dentro del archivo `manifests/kopf-operator-install.yaml` podrás encontrar todos
+los permisos le damos a nuestro operador por medio de un
+[ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole)
++
+[ServiceAccount](https://kubernetes.io/docs/concepts/security/service-accounts/).
+
+### ¿Le agregarías algo más a la solución final?
+
+Si, de nuevo por fines didácticos se priorizó que el código sea fácil de leer,
+por ello evitamos agregar un par de cosas más. Como por ejemplo:
+
+- Podríamos mover el filtrado de eventos a una
+  [expresión lambda](https://docs.python.org/3/tutorial/controlflow.html#lambda-expressions)
+  en el parametro `when` de la anotación `@kopf.on.event`. Viendose algo así:
+
+```python
+@kopf.on.event('pods',
+               labels={'secret-handshake': kopf.PRESENT},
+               annotations={'secret-handshake-done': kopf.ABSENT},
+               when= lambda status, event, **_: event.get('type') != 'DELETED' and status.get('phase') == 'Running')
+async def handle_legacy_pod(event, status, namespace, name, logger, **_):
+    podIP = status.get('podIP', '')
+    if not podIP:
+        return
+
+    logger.info(f"=== Found {name} in {namespace} namespace w/ {podIP} address")
+
+    asyncio.create_task(secret_handshake(podIP, namespace, name, logger))
 ```
 
-- Construye y carga las imagenes de nuestras aplicaciones (Legacy y el operador)
+- Podríamos mover el requerimiento del label `secrect-handshake` a nivel del
+  Deployment y que este se "pase" al Pod cuando se crea. Pero eso requeriría:
+    - Que el operador tenga accesso a `apps/Deployment` en los verbos `get`,
+      `list` y `patch`
+    - Agregar un nueva función con la anotación `@kopf.on.create`
 
-```sh
-../_hack/build.sh ./mock-app
-../_hack/build.sh ./kopf-operator
+```python
+@kopf.on.create('deployments', labels={'secret-handshake': kopf.PRESENT})
+async def handle_legacy_deployment():
+    # Lógica de agregar el label a los Pods dentro de deployment.spec.template.metadata.labels
 ```
 
-**NOTA**: Al crear nuestro cluster `minikube` seleccionará el mejor backend para
-tu entorno local. Aún así, **en caso** el backend seleccionado sea `docker` (ó
-utilizas OSX ) necesitas hacer lo siguiente en una *nueva terminal* para
-interactuar directamente con Legacy:
+### ¿Debería utilizar kopf para mis operadores o recomiendas otros frameworks?
 
-```sh
-minikube tunnel
-```
+Depende. Cuando comparas herramientas no hay mejor o peor, sino cuándo y cómo
+las utilizas.
 
-### Acerca del código de nuestra historia
+El framework kopf es una excelente herramienta para crear pruebas de concepto
+rápidamente, aprender experimentando y compartir ideas en un lenguaje de
+programación amigable al lector. Aún así, en proyectos que tendrán varios
+contribuidores muchas veces es preferible optar por frameworks con "opiniones
+fuertes" en cuanto mejores prácticas y cómo deberían ser utilizados.
 
-La mejor parte de esta historia es poder revisar el código fuente y experimentar
-con el mismo. Nuestro ejemplo está divido en tres directorios principales:
-
-- `mock-app` Contiene una pequeña aplicación escrita en Go simula el
-  comportamiento de Legacy. Esta aplicación es derivada de
-  [hashicorp/http-echo](https://github.com/hashicorp/http-echo).
-
-- `kopf-operator` Contiene la lógica de nuestro operado, utilzando está escrito
-  en Python 3 y el Kubernetes Pythonic Operator Framework (kopf).
-
-- `manifests` Contiene todos los Kubernetes Manifest (archivos YAML) que definen
-  como provisionar a Legacy y nuestro Operador.
-
-### Comandos desarrollo que debes recordar
-
-Crear ambiente virtual para las librerías
-
-```sh
-python -m venv .venv
-```
-
-Activar ó desactivar ambiente virtual
-
-```sh
-# Activar
-source .venv/bin/activate
-# Desactivar
-deactivate
-```
-
-Instalar todas las dependencias
-
-```sh
-# Dentro del directorio de kopf-opeartor
-python -m pip install -r requirements.txt
-```
-
-Correr operador en modo desarrollo
-
-```sh
-# Dentro del directorio de kopf-opeartor
-kopf run --all-namespaces controller.py
-```
+Una alternativa que puedes explorar es [kubebuilder](https://kubebuilder.io/).
