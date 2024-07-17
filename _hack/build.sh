@@ -6,7 +6,7 @@ build_image() {
     CONTEXT="${1}"
     IMAGE_NAME="$(basename $1)"
     VERSION="${2:-0.1.0}"
-    NAMESPACE="lets-talk-about-operators"
+    NAMESPACE="kubernetes-is-fun"
 
     docker image build -f "${CONTEXT}/Dockerfile" -t "${NAMESPACE}/${IMAGE_NAME}:${VERSION}" "${CONTEXT}"
 }

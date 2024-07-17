@@ -1,43 +1,104 @@
-# Hablemos de autómatas y Operadores de Kubernetes
+# Kubernetes es divertido
 
-Bienvenido a la introducción práctica a Operadores de Kubernetes. Si tuviste la
-oportunidad de estar en la plática podrás identificar fácilmente los ejemplos
-que se encuentran en este repositorio.
+Por alguna razón, muchos hemos llegado a pensar que Kubernetes no es divertido
+para desarrolladores, cuando en realidad hay muchas maneras de
+[extenderlo](https://kubernetes.io/docs/concepts/extend-kubernetes/) en el
+lenguaje de programación que más nos acomode.
 
-En la raíz de este repositorio encontrarás los siguientes directorios:
+Exploremos como podemos extender el comportamiento de Kubernetes.
 
-- **legacy**. Contiene el código fuente de nuestra aplicación "Legacy", el
-  operador que maneja su despliegue y los manifestos que nos permiten
-  provisionarlos.
-- **less**. Contiene los componentes que utilizamos para la historia *less is
-  more*, el helm chart de nuestra aplicación ejemplo, el código fuente del
-  operador generado por
-  [Operator SDK](https://sdk.operatorframework.io/docs/installation/) y los yaml
-  para desplegar cada componente.
-- **\_hack**. Acá están todos los scripts que nos ayudaran a hacer fácilmente
-  inicializar y construir los artefactos que encuentras en el repositorio.
+<!-- Tal vez hasta lograremos hacer que Kubernetes salte ;) -->
 
-## Requerimientos
+## ¿Dónde inicio?
 
-Los ejercicios descritos en este repositorio necesita las siguientes
-herramientas para poder funcionar:
+Este repositorio está conformado por enunciados de ejercicios sencillos y la
+solución final. Si deseas ir paso a paso, puedes seguir la conversación en la
+grabación (PENDIENTE) o bien guiarte por el `README.md` en cáda directorio y
+explorar por tu cuenta.
 
-- [minikube](https://minikube.sigs.k8s.io/docs/start/)
+El orden recomendado en base a su complejidad es el siguiente:
+
+- `bouncer/` Extiende el API de Kubernetes creando tus propios Admission
+  Webhooks con pepr.
+- `less/` Crea un Kubernetes Controller utilizando helm y el Operator SDK.
+- `legacy/` Crea un Operador para automatizar el provisionamiento de una
+  aplicación Legacy.
+
+Pero eres bienvenido a explorar de la manera que más te funcione 😉.
+
+### Requerimientos
+
+Los ejercicios anteriormente mencionados están intencionalmente escritos en
+múltiples lenguajes, valiendose de diferentes herramientas pero como mínimo
+necesitarás tener instalado:
+
 - [docker](https://www.docker.com/products/docker-desktop/)
+- [minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 
-En caso desees experimentar con el código fuente de las aplicaciones entonces necesitarás:
+Cada solución indica que lenguaje de programación utilizaremos, pero si te
+quieres adelantar puedes instalar:
 
 - [Python](https://www.python.org/downloads/) 3.9+
 - [Golang](https://go.dev/doc/install) 1.18+
+- [Node.js](https://github.com/nvm-sh/nvm) v20+
 
-## Otros recursos
+### Levantando nuestro clúster local de pruebas
 
-El enfoque de este repositorio es dar una introducción práctica en Español a
-operadores, pero si buscas material que va a más profundidad puedes utilizar:
+Para realizar las soluciones a los ejercicios en este repositorio no necesitas
+crear un clúster de Kubernetes en a la nube. Si ya tienes instalado `minikube`
+solo necesitas hacer lo siguiente:
 
-- Kubernetes Operators Documentation <https://kubernetes.io/docs/concepts/extend-kubernetes/operator/>
+```shell
+../_hack/setup.sh
+```
+
+Toda la configuración para conectarte al clúster local ya ha sido generada,
+ahora ya puedes utilizar comandos de `kubectl` sin problema. Como por ejemplo:
+
+```shell
+$ kubectl get nodes
+NAME      STATUS   ROLES           AGE     VERSION
+k8s-fun   Ready    control-plane   1h      v1.30.2
+```
+
+Cuando termines o desees comenzar desde cero, puedes destruir el clúster con:
+
+```shell
+../_hack/clean-up.sh
+```
+
+**Importante**: Al crear nuestro clúster, `minikube` seleccionará el mejor
+backend para tu entorno local. En algunos casos seleccionará `docker`, lo cual
+implica que necesitas correr el siguiente comando en una nueva terminal para
+poder acceder directamente a los endpoints de las aplicaciones de ejemplo.
+
+```shell
+minikube tunnel
+```
+
+En caso no sepas que backend selección `minikube` por ti puedes utilizar el
+siguiente comando:
+
+```shell
+$ minikube profile list
+|------------|-----------|---------|--------------|------|---------|---------|-------|----------------|--------------------|
+|  Profile   | VM Driver | Runtime |      IP      | Port | Version | Status  | Nodes | Active Profile | Active Kubecontext |
+|------------|-----------|---------|--------------|------|---------|---------|-------|----------------|--------------------|
+| k8s-is-fun | docker    | docker  | 192.168.58.2 | 8443 | v1.30.2 | Running |     1 | *              | *                  |
+|------------|-----------|---------|--------------|------|---------|---------|-------|----------------|--------------------|
+```
+
+## Quiero aprender más
+
+Si terminaste con los ejercicios o tu gustaría leer material que va a más
+profundidad puedes utilizar:
+
+- Extending Kubernetes <https://kubernetes.io/docs/concepts/extend-kubernetes/>
+- pepr documentation <https://docs.pepr.dev/>
+- Operator SDK documentation <https://sdk.operatorframework.io/docs/>
+- KOPF documentation <https://kopf.readthedocs.io/en/stable/>
+- kubebuilder documentation <https://book.kubebuilder.io/>
+- kube-rs documentation <https://kube.rs/getting-started/>
+- Kubernetes RBAC <https://kubernetes.io/docs/reference/access-authn-authz/rbac>
 - CNCF Operator Whitepaper <https://tag-app-delivery.cncf.io/whitepapers/operator/>
-- KOPF Documentation <https://kopf.readthedocs.io/en/stable/>
-- Operator SDK Documentation <https://sdk.operatorframework.io/docs/>
-- Kubernetes Operators Explained <https://www.youtube.com/watch?v=i9V4oCa5f9I>
-- Building operators with the Operator SDK <https://www.youtube.com/watch?v=5XZZxhwb_xs>

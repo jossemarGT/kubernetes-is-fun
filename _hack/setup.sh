@@ -13,7 +13,7 @@ fi
 minikube start \
     $MK_EXTRA_FLAGS \
     --addons ingress \
-    --kubernetes-version v1.27.6 \
+    --kubernetes-version v1.30.2 \
     --profile "${DEFAULT_CLUSTER_NAME}"
 
 minikube profile "${DEFAULT_CLUSTER_NAME}"

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DEFAULT_CLUSTER_NAME="operators-lab"
+DEFAULT_CLUSTER_NAME="k8s-is-fun"
 
 check_dep () {
     if ! command -v "${1}" >/dev/null 2>&1; then
