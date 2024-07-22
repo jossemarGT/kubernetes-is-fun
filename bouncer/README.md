@@ -3,11 +3,16 @@
 ¿Qué tal si pudieramos evitar que lleguen malas configuraciones a nuestro
 clúster de Kuberntes?
 
-Acá averiguaremos como hacerlo.
+## El concepto
 
-## El problema
+Kubernetes nos permiete extender su API con los
+[Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
+los cuales reciben las peticiones de creación, actualización o eliminación de
+recursos antes de ser procesadas.
 
-El "Senior" de nuestro equipo comenta que varios compañeros se les olvida
+## El ejercicio a resolver
+
+El "Senior" de nuestro equipo comenta que a varios compañeros se les olvida
 colocar la etiqueta `equipo` en las cargas de trabajo y configuraciones que
 aplican a Kubernetes. Esta _label_ es importante porque ayuda en varios procesos
 internos de la empresa.
@@ -16,13 +21,6 @@ Nosotros como desarrolladores sabemos que Kubernetes tiene un API y tal vez
 podríamos crear algo que funcione como _middleware_ que **valide** cada uno de
 los objetos que llegan a el. Así podríamos filtrar solo los objetos que cumplen
 con las normas.
-
-## El concepto
-
-Kubernetes nos permiete extender su API con los
-[Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
-los cuales reciben las peticiones de creación, actualización o eliminación de
-recursos antes de ser procesadas.
 
 ## La solución
 
@@ -133,7 +131,7 @@ Error from server: error when creating "manifests/bouncer.samples.yaml": admissi
 denied the request: ConfigMap debe tener label 'equipo'
 ```
 
-Descomentamos los labels que hacen falta y volvemos a intenetar
+Descomentamos los labels que hacen falta y volvemos a intentar
 
 ```shell
 # sed 's/# //g' manifests/bouncer.samples.yaml

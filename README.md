@@ -32,9 +32,9 @@ Los ejercicios anteriormente mencionados están intencionalmente escritos en
 múltiples lenguajes, valiendose de diferentes herramientas pero como mínimo
 necesitarás tener instalado:
 
-- [docker](https://www.docker.com/products/docker-desktop/)
-- [minikube](https://minikube.sigs.k8s.io/docs/start/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [docker desktop](https://www.docker.com/products/docker-desktop/) v4.30+
+- [minikube](https://minikube.sigs.k8s.io/docs/start/) v1.33+
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) v1.30+
 
 Cada solución indica que lenguaje de programación utilizaremos, pero si te
 quieres adelantar puedes instalar:
@@ -46,11 +46,11 @@ quieres adelantar puedes instalar:
 ### Levantando nuestro clúster local de pruebas
 
 Para realizar las soluciones a los ejercicios en este repositorio no necesitas
-crear un clúster de Kubernetes en a la nube. Si ya tienes instalado `minikube`
+crear un clúster de Kubernetes en la nube. Si ya tienes instalado `minikube`
 solo necesitas hacer lo siguiente:
 
 ```shell
-../_hack/setup.sh
+./_hack/setup.sh
 ```
 
 Toda la configuración para conectarte al clúster local ya ha sido generada,
@@ -77,8 +77,7 @@ poder acceder directamente a los endpoints de las aplicaciones de ejemplo.
 minikube tunnel
 ```
 
-En caso no sepas que backend selección `minikube` por ti puedes utilizar el
-siguiente comando:
+En caso no sepas que backend `minikube` utilizó puedes verificarlo así:
 
 ```shell
 $ minikube profile list
@@ -91,7 +90,7 @@ $ minikube profile list
 
 ## Quiero aprender más
 
-Si terminaste con los ejercicios o tu gustaría leer material que va a más
+Si terminaste con los ejercicios o te gustaría leer material que va a más
 profundidad puedes utilizar:
 
 - Extending Kubernetes <https://kubernetes.io/docs/concepts/extend-kubernetes/>

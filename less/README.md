@@ -3,9 +3,25 @@
 ¿Qué tal si pudieramos reducir la cantidad de Objetos utilizados en depliegues
 contidianos y así simplificar proceso? 
 
-Acá averiguaremos como hacerlo.
+## El concepto
 
-## El problema
+El Kubernetes API maneja un catálogo amplio de Objetos nativos, tambien llamados
+Recursos, los cuales solo son la representación de alguna conguración o
+aplicación que será eventualmente desplegada en el clúster. Este catálogo de
+Objetos tambien puede ser extendido por medio de
+[CRD](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)s
+(Custom Resource Definition), que nos permite definir nuestros propios Recursos.
+
+Como Recursos solo son representaciones de datos, necesitamos de otros
+componentes para que ese Recurso pase a volverse instrucciones dentro del
+clúster. Para esto tenemos los [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/).
+
+Un Controller es una aplicación que se mantiene observando los cambios aplicados
+en los Recursos que están dentro de su responsabilidad. Una vez la definición
+del "estado deseado" de un Recurso cambia el Controller se encarga de modificar
+el "estado actual" de lo que representa dentro del clúster.
+
+## El ejercicio a resolver
 
 Entre tantas cosas que cubrimos en nuestra empresa está publicar "la frase del
 día" (FDD) que modifica manualmente con mucha frecuencia. Todos tienen acceso a
@@ -24,24 +40,6 @@ aplicar cambios en las configuraciones de la FDD app y el proceso se ve así:
    lo cual le da acceso a **editar** otros objetos del mismo tipo dentro del clúster
 3. ...
 4. Mejor dejésmolo allí 😅
-
-## El concepto
-
-El Kubernetes API maneja un catálogo amplio de Objetos nativos, tambien llamados
-Recursos, los cuales solo son la representación de alguna conguración o
-aplicación que será eventualmente desplegada en el clúster. Este catálogo de
-Objetos tambien puede ser extendido por medio de
-[CRD](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)s
-(Custom Resource Definition), que nos permite definir nuestros propios Recursos.
-
-Como Recursos solo son representaciones de datos, necesitamos de otros
-componentes para que ese Recurso pase a volverse instrucciones dentro del
-clúster. Para esto tenemos los [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/).
-
-Un Controller es una aplicación que se mantiene observando los cambios aplicados
-en los Recursos que están dentro de su responsabilidad. Una vez la definición
-del "estado deseado" de un Recurso cambia el Controller se encarga de modificar
-el "estado actual" de lo que representa dentro del clúster.
 
 ## La solución
 

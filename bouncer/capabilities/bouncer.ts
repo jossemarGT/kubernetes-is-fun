@@ -12,6 +12,7 @@ const { When } = Bouncer;
 
 When(a.ConfigMap)
   .IsCreatedOrUpdated()
+  .InNamespace("bouncer-demo")
   .Mutate(request => {
     const { username } = request.Request.userInfo;
 

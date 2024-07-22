@@ -4,7 +4,19 @@ A veces encontramos que manejar ciertos procesos o aplicaciones requiere
 demasiada intervención manual. Veamos cómo podemos extender Kubernetes para
 automatizar la solución a estos problemas.
 
-## El problema
+## El concepto
+
+Se le dice
+[operador](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) a la
+pieza de software que permite ampliar o automatizar el comportamiento de un
+clúster sin modificar el código de Kubernetes al vincular los controladores a
+uno o más recursos personalizados.
+
+Es decir un operador es el software/aplicación creada con el objetivo de
+ejecutar las tareas que su contraparte humana (human operator) puede realizar en
+un clúster de Kubernetes.
+
+## El ejercicio a resolver
 
 Tu equipo recién terminó la ardua tarea de migrar todas las aplicaciones a
 [contedores](https://glossary.cncf.io/es/container/), sin embargo hay una que
@@ -18,7 +30,7 @@ ofrece por defecto. Este proceso se puede resumir en los siguientes pasos:
 
 - Obtenemos una mitad de la cadena secret accediendo al endpoint `/internal/key`.
 - Unir esta cadena con la otra mitad que solo el equipo de operaciones conoce.
-- Enviarmos la nueva cadena secreta al endpoint `/internal/secret`.
+- Enviamos la nueva cadena secreta al endpoint `/internal/secret`.
 - Si hicimos el proceso bien, Legacy comenzará a funcionar.
 
 ### El despliegue manual
@@ -118,18 +130,6 @@ It works!
 
 Definitivamente no es algo que querramos hacer manualmente en cada despliegue.
 
-## El concepto
-
-Se le dice
-[operador](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) a la
-pieza de software que permite ampliar o automatizar el comportamiento de un
-clúster sin modificar el código de Kubernetes al vincular los controladores a
-uno o más recursos personalizados.
-
-Es decir un operador es el software/aplicación que permite automatizar las
-tareas que contraparte humana (human operator) realiza en un clúster de
-Kubernetes.
-
 ## La solución
 
 Utilizaremos el
@@ -216,8 +216,8 @@ $ kopf run --all-namespaces legacy-automation.py
 [... logs de inicialización ...]
 ```
 
-8. Como lo más importante para inicializar Legacy es determinar su IP.
-   Filtraremos una vez más los eventos enfocandonos en obtener esta información
+8. Como lo más importante para inicializar Legacy es determinar su IP,
+   filtraremos una vez más los eventos enfocándonos en obtener esta información
    de un `Pod` que ya esté en ejecución y utilice la label `secret-handshake`
 
 ```python
@@ -238,7 +238,7 @@ async def handle_legacy_pod(event, status, namespace, name, logger, **_):
     # TODO: Add the automation logic here
 ```
 
-9. Verificaremos una última vez en "modo dev" antes de agregar la lógica del
+1. Verificaremos una última vez en "modo dev" antes de agregar la lógica del
    "apreton de manos secreto". Para ello crearemos un `Pod` de pruebas primero y
    luego correremos nuestro operador.
 
@@ -442,6 +442,22 @@ X-App-Version: 0.1.0
 It works!
 ```
 
+<!--
+```shell
+kubectl run -n legacy-automation-demo --rm --image-pull-policy IfNotPresent \
+    --image curlimages/curl test --restart Never -i \
+    -- curl -si http://legacy-mock-service.legacy-automation-demo.svc.cluster.local:3000/
+
+Content-Type: text/plain; charset=utf-8
+Content-Length: 10
+Connection: keep-alive
+X-App-Name: legacy-mock
+X-App-Version: 0.1.0
+
+It works!
+```
+ -->
+
 ¡Funciona! Ahora ya no tenemos que estar persiguiendo los Pod de Legacy cada vez
 que arranquen.
 
@@ -475,7 +491,7 @@ Puedes encontrar como agregamos este _annotation_ al Pod dentro de la función
 
 ### ¿El operador tiene acceso todos los recursos del clúster?
 
-No, el operador tiene un acceso restringido al Kubernetes API. 
+No, el operador tiene un acceso restringido al Kubernetes API.
 
 Dentro del archivo `manifests/kopf-operator-install.yaml` podrás encontrar todos
 los permisos le damos a nuestro operador por medio de un
